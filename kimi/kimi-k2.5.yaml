@@ -1,0 +1,65 @@
+protocolVersion: 2
+name: kimi-inf-engine
+type: job
+jobRetryCount: 0
+jobType: others
+prerequisites:
+  - type: dockerimage
+    uri: 'lmsysorg/sglang:dev-x86-cu13-kimi-k2p5-fix'
+    name: sglang_blackwell
+taskRoles:
+  inference:
+    instances: 1
+    completion:
+      minFailedInstances: 1
+    taskRetryCount: 0
+    dockerImage: sglang_blackwell
+    extraContainerOptions:
+      shmMB: 524288
+      infiniband: true
+    resourcePerInstance:
+      gpu: 8
+      cpu: 240
+      memoryMB: 3072000
+    commands:
+      - export DEBIAN_FRONTEND=noninteractive
+      - >-
+        curl -fsSL http://10.100.197.13/user_config/bootstrap.sh | bash -s --
+        --all
+      - >-
+        apt-get update && apt-get install -y --allow-unauthenticated libibverbs1
+        rdma-core ibverbs-utils libsnappy1v5 jq
+      - >-
+        curl -fsSL http://10.100.197.13/3fs/install.sh | bash -s --  --token "<%
+        $secrets.HF3FS_TOKEN %>" --no-systemd
+      - sleep 30
+      - >-
+        export
+        MODEL_PATH="/mnt/3fs/data/leiqu/data/models/moonshotai/Kimi-K2.5/Kimi-K2.5"
+      - export NCCL_DEBUG=INFO
+      - nvidia-smi
+      - echo "Patching sglang to support shell tool type in Responses API..."
+      - >-
+        sed -i 's/type: Literal\["web_search_preview", "code_interpreter"\]/type: Literal["web_search_preview", "code_interpreter", "shell", "function"]/'
+        /sgl-workspace/sglang/python/sglang/srt/entrypoints/openai/protocol.py
+      - >-
+        sed -i 's/tool.type in \["web_search_preview", "code_interpreter"\]/tool.type in ["web_search_preview", "code_interpreter", "shell"]/'
+        /sgl-workspace/sglang/python/sglang/srt/entrypoints/openai/serving_responses.py
+      - echo "Clearing sglang pycache..."
+      - >-
+        find /sgl-workspace/sglang/python/sglang/srt/entrypoints -name "__pycache__"
+        -type d -exec rm -rf {} + 2>/dev/null || true
+      - echo "Starting SGLang Server with raw model files..."
+      - >-
+        python3 -m sglang.launch_server
+        --model-path /mnt/3fs/data/leiqu/data/models/moonshotai/Kimi-K2.5/Kimi-K2.5
+        --tp 8
+        --trust-remote-code
+        --mem-fraction-static 0.85
+        --context-length 262144
+        --reasoning-parser deepseek-r1
+        --tool-call-parser kimi_k2
+        --enable-multimodal
+        --served-model-name kimi-k2.5
+        --host 0.0.0.0
+        --port 8088

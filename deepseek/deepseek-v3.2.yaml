@@ -1,0 +1,59 @@
+protocolVersion: 2
+name: deepseek-inf-engine
+type: job
+jobRetryCount: 0
+prerequisites:
+  - type: dockerimage
+    uri: 'lmsysorg/sglang:dev-x86-cu13-20260110'
+    name: sglang_image
+taskRoles:
+  inference:
+    instances: 1
+    completion:
+      minFailedInstances: 1
+    taskRetryCount: 0
+    dockerImage: sglang_image
+    extraContainerOptions:
+      shmMB: 131072
+      infiniband: true
+    resourcePerInstance:
+      gpu: 8
+      cpu: 240
+      memoryMB: 3072000
+    commands:
+      # 1. Environment initialization (apt, pypi, conda sources)
+      - echo "Initializing environment sources..."
+      - curl -fsSL http://10.100.197.13/user_config/bootstrap.sh | bash -s -- --all
+
+      # 2. Mount 3FS storage to a standard path /mnt/_3fs
+      - echo "Mounting 3FS file system..."
+      - 'curl -fsSL http://10.100.197.13/3fs/install.sh \'
+      - '| bash -s -- --token "<% $secrets.HF3FS_TOKEN %>" --no-systemd'
+
+      # 3. env
+      - export NVIDIA_VISIBLE_DEVICES=all
+      - export CUDA_DEVICE_ORDER=PCI_BUS_ID
+      - export TRITON_PTXAS_PATH=/usr/local/cuda/bin/ptxas
+      - export SGLANG_USE_FLASHINFER=1
+      - export NCCL_P2P_LEVEL=NVL
+      - export NCCL_IB_DISABLE=1
+
+      # 4. Verify model path visibility and start SGLang server
+      - echo "Verifying model directory..."
+      - sleep 60
+      - ls -d /mnt/3fs/data/leiqu/data/models/deepseek-v3.2
+      - echo "Launching SGLang on ..."
+      - >-
+        python3 -m sglang.launch_server
+        --model-path /mnt/3fs/data/leiqu/data/models/deepseek-v3.2
+        --served-model-name deepseek-v3.2
+        --tp 8
+        --trust-remote-code
+        --host 0.0.0.0
+        --port 8088
+        --quantization fp8
+        --kv-cache-dtype bf16
+        --mem-fraction-static 0.7
+        --context-length 131072
+        --attention-backend flashinfer
+        --tool-call-parser deepseekv32
