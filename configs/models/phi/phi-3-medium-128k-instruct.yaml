@@ -1,0 +1,53 @@
+model:
+  name: "Phi-3 Medium 128K Instruct"
+  family: "phi"
+  size: "14b"
+  hf_model_id: "microsoft/Phi-3-medium-128k-instruct"
+  hf_revision: "main"
+
+hardware:
+  min_gpus: 1
+  gpu_memory_gb: 40
+  recommended_gpu: "A100-40GB"
+
+inference:
+  dtype: "bfloat16"
+  max_model_len: 131072
+  max_num_seqs: 32
+  tensor_parallel_size: 1
+  pipeline_parallel_size: 1
+  quantization: null
+
+vllm:
+  block_size: 16
+  gpu_memory_utilization: 0.90
+  swap_space: 8
+  disable_chunked_prefill: false
+  enforce_eager: false
+
+tgi:
+  max_batch_total_tokens: 262144
+  max_new_tokens: 8192
+  max_total_tokens: 131072
+  max_concurrent_requests: 16
+  max_waiting_tokens: 20
+  num_shard: 1
+
+resources:
+  requests:
+    cpu: "8"
+    memory: "48Gi"
+    nvidia.com/gpu: "1"
+  limits:
+    cpu: "16"
+    memory: "96Gi"
+    nvidia.com/gpu: "1"
+  image: "vllm/vllm-openai:latest"
+  image_pull_policy: "IfNotPresent"
+
+serving:
+  host: "0.0.0.0"
+  port: 8000
+  api_base_path: "/v1"
+  api_key: null
+  log_requests: false

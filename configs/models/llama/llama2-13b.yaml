@@ -1,0 +1,53 @@
+model:
+  name: "LLaMA-2 13B"
+  family: "llama"
+  size: "13b"
+  hf_model_id: "meta-llama/Llama-2-13b-hf"
+  hf_revision: "main"
+
+hardware:
+  min_gpus: 1
+  gpu_memory_gb: 32
+  recommended_gpu: "A100-40GB"
+
+inference:
+  dtype: "float16"
+  max_model_len: 4096
+  max_num_seqs: 128
+  tensor_parallel_size: 1
+  pipeline_parallel_size: 1
+  quantization: null
+
+vllm:
+  block_size: 16
+  gpu_memory_utilization: 0.90
+  swap_space: 4
+  disable_chunked_prefill: false
+  enforce_eager: false
+
+tgi:
+  max_batch_total_tokens: 16384
+  max_new_tokens: 2048
+  max_total_tokens: 4096
+  max_concurrent_requests: 64
+  max_waiting_tokens: 20
+  num_shard: 1
+
+resources:
+  requests:
+    cpu: "8"
+    memory: "32Gi"
+    nvidia.com/gpu: "1"
+  limits:
+    cpu: "16"
+    memory: "64Gi"
+    nvidia.com/gpu: "1"
+  image: "vllm/vllm-openai:latest"
+  image_pull_policy: "IfNotPresent"
+
+serving:
+  host: "0.0.0.0"
+  port: 8000
+  api_base_path: "/v1"
+  api_key: null
+  log_requests: false
