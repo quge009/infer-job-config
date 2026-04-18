@@ -1,0 +1,53 @@
+model:
+  name: "Falcon 180B"
+  family: "falcon"
+  size: "180b"
+  hf_model_id: "tiiuae/falcon-180B"
+  hf_revision: "main"
+
+hardware:
+  min_gpus: 8
+  gpu_memory_gb: 80
+  recommended_gpu: "A100-80GB"
+
+inference:
+  dtype: "bfloat16"
+  max_model_len: 8192
+  max_num_seqs: 32
+  tensor_parallel_size: 8
+  pipeline_parallel_size: 1
+  quantization: null
+
+vllm:
+  block_size: 16
+  gpu_memory_utilization: 0.92
+  swap_space: 16
+  disable_chunked_prefill: false
+  enforce_eager: false
+
+tgi:
+  max_batch_total_tokens: 16384
+  max_new_tokens: 2048
+  max_total_tokens: 8192
+  max_concurrent_requests: 16
+  max_waiting_tokens: 20
+  num_shard: 8
+
+resources:
+  requests:
+    cpu: "32"
+    memory: "640Gi"
+    nvidia.com/gpu: "8"
+  limits:
+    cpu: "64"
+    memory: "1280Gi"
+    nvidia.com/gpu: "8"
+  image: "vllm/vllm-openai:latest"
+  image_pull_policy: "IfNotPresent"
+
+serving:
+  host: "0.0.0.0"
+  port: 8000
+  api_base_path: "/v1"
+  api_key: null
+  log_requests: false

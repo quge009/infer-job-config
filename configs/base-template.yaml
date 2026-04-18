@@ -1,0 +1,110 @@
+# Base configuration template for OSS inference jobs.
+# Copy and customise this file for your specific model and deployment target.
+
+# ---------------------------------------------------------------------------
+# Model identity
+# ---------------------------------------------------------------------------
+model:
+  # Human-readable name for this configuration.
+  name: "<model-name>"
+  # Model family (e.g. llama, mistral, falcon, phi, gemma, qwen, deepseek).
+  family: "<model-family>"
+  # Model size descriptor (e.g. 7b, 13b, 70b).
+  size: "<size>"
+  # Hugging Face Hub model id (org/repo format).
+  hf_model_id: "<org>/<repo>"
+  # Revision / branch / tag on the Hub. "main" is usually the latest.
+  hf_revision: "main"
+
+# ---------------------------------------------------------------------------
+# Hardware requirements
+# ---------------------------------------------------------------------------
+hardware:
+  # Minimum number of GPUs required for inference.
+  min_gpus: 1
+  # GPU VRAM required per device (GiB). Used for scheduling.
+  gpu_memory_gb: 24
+  # Recommended GPU type. Informational only.
+  recommended_gpu: "A100-80GB"
+
+# ---------------------------------------------------------------------------
+# Inference engine settings (shared across frameworks)
+# ---------------------------------------------------------------------------
+inference:
+  # Floating-point precision: float16 | bfloat16 | float32 | auto
+  dtype: "bfloat16"
+  # Maximum number of tokens in a single sequence (prompt + completion).
+  max_model_len: 4096
+  # Maximum number of sequences processed in parallel.
+  max_num_seqs: 256
+  # Tensor parallelism degree – must equal hardware.min_gpus.
+  tensor_parallel_size: 1
+  # Pipeline parallelism degree (for multi-node deployments).
+  pipeline_parallel_size: 1
+  # Post-training quantization method: null | awq | gptq | bitsandbytes | fp8
+  quantization: null
+
+# ---------------------------------------------------------------------------
+# vLLM-specific settings  (https://docs.vllm.ai)
+# ---------------------------------------------------------------------------
+vllm:
+  # Block size for the KV cache paged attention allocator.
+  block_size: 16
+  # Fraction of GPU memory to reserve for the KV cache (0.0 – 1.0).
+  gpu_memory_utilization: 0.90
+  # Swap space on CPU (GiB) used when GPU KV cache is full.
+  swap_space: 4
+  # Disable chunked prefill; set true only for very long contexts.
+  disable_chunked_prefill: false
+  # Disable CUDA graph capture and run in eager mode; keep false for better throughput.
+  enforce_eager: false
+
+# ---------------------------------------------------------------------------
+# Hugging Face Text Generation Inference (TGI) settings
+# (https://huggingface.co/docs/text-generation-inference)
+# ---------------------------------------------------------------------------
+tgi:
+  # Maximum number of tokens in the entire batch.
+  max_batch_total_tokens: 32768
+  # Maximum new tokens per request.
+  max_new_tokens: 2048
+  # Maximum total tokens (input + output) per request.
+  max_total_tokens: 4096
+  # Maximum number of concurrent requests.
+  max_concurrent_requests: 128
+  # Waiting queue size before requests are rejected.
+  max_waiting_tokens: 20
+  # Number of shard processes (usually equals tensor_parallel_size).
+  num_shard: 1
+
+# ---------------------------------------------------------------------------
+# Kubernetes / container resource requests
+# ---------------------------------------------------------------------------
+resources:
+  requests:
+    cpu: "8"
+    memory: "32Gi"
+    # GPU resource key varies by cluster (nvidia.com/gpu or amd.com/gpu).
+    nvidia.com/gpu: "1"
+  limits:
+    cpu: "16"
+    memory: "64Gi"
+    nvidia.com/gpu: "1"
+  # Container image for the inference server.
+  # Use an official vLLM or TGI image, or a custom image.
+  image: "vllm/vllm-openai:latest"
+  # Pull policy: Always | IfNotPresent | Never
+  image_pull_policy: "IfNotPresent"
+
+# ---------------------------------------------------------------------------
+# Serving / API settings
+# ---------------------------------------------------------------------------
+serving:
+  host: "0.0.0.0"
+  port: 8000
+  # OpenAI-compatible endpoint prefix.
+  api_base_path: "/v1"
+  # Set to a non-null string to require an API key.
+  api_key: null
+  # Log every request (useful for debugging; disable in production).
+  log_requests: false

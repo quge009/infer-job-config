@@ -1,0 +1,53 @@
+model:
+  name: "Gemma 2B Instruct"
+  family: "gemma"
+  size: "2b"
+  hf_model_id: "google/gemma-2b-it"
+  hf_revision: "main"
+
+hardware:
+  min_gpus: 1
+  gpu_memory_gb: 8
+  recommended_gpu: "T4-16GB"
+
+inference:
+  dtype: "bfloat16"
+  max_model_len: 8192
+  max_num_seqs: 512
+  tensor_parallel_size: 1
+  pipeline_parallel_size: 1
+  quantization: null
+
+vllm:
+  block_size: 16
+  gpu_memory_utilization: 0.90
+  swap_space: 4
+  disable_chunked_prefill: false
+  enforce_eager: false
+
+tgi:
+  max_batch_total_tokens: 32768
+  max_new_tokens: 4096
+  max_total_tokens: 8192
+  max_concurrent_requests: 256
+  max_waiting_tokens: 20
+  num_shard: 1
+
+resources:
+  requests:
+    cpu: "2"
+    memory: "8Gi"
+    nvidia.com/gpu: "1"
+  limits:
+    cpu: "4"
+    memory: "16Gi"
+    nvidia.com/gpu: "1"
+  image: "vllm/vllm-openai:latest"
+  image_pull_policy: "IfNotPresent"
+
+serving:
+  host: "0.0.0.0"
+  port: 8000
+  api_base_path: "/v1"
+  api_key: null
+  log_requests: false
